@@ -20,6 +20,8 @@ model Alunos {
   email     String    @unique
   creatdAt  DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  alunosCursos AlunosCursos[]
 }
 
 model Cursos {
@@ -30,4 +32,15 @@ model Cursos {
   descricao    String
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  alunos AlunosCursos[]
+}
+
+model AlunosCursos {
+     id        Int      @id @default(autoincrement())
+  alunosId  Int
+  cursosId  Int
+  alunos    Alunos   @relation(fields: [alunosId], references: [id])
+  cursos    Cursos   @relation(fields: [cursosId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
