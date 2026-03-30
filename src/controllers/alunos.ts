@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
 import prismaErrorCodes from "../../config/prismaErrorCodes.json";
 import { Prisma } from "../../generated/prisma/client";
-import cursos from "./cursos";
+import { handleErrors } from "../helpers/handleError";
 
 export default {
 
@@ -59,12 +59,8 @@ export default {
                 data: user
             });
         } catch (e: any) {
-            console.error(e)
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                // @ts-ignore
-                return response.status(prismaErrorCodes[e.code] || 500).json(e.message)
-            }
-            return response.status(500).json("Unkwon error. Try again later");
+        return handleErrors(e, response);
+
         }
     },
 
@@ -88,11 +84,7 @@ export default {
             });
             return response.status(200).json(user);
         } catch (e) {
-            if (e instanceof Prisma.PrismaClientKnownRequestError) {
-                // @ts-ignore
-                return response.status(prismaErrorCodes[e.code] || 500).json(e.message)
-            }
-            return response.status(500).json("Unkwon error. Try again later");
+        return handleErrors(e, response);
         }
     },
 
@@ -145,20 +137,19 @@ export default {
 
 
 
-    matricular: async (request: Request, response: Response) => {
+   matricular: async (request: Request, response: Response) => {
     try {
-        const { alunoId, cursoId } = request.body;
-
+        const { alunoId, cursosIds } = request.body;
 
         const matricula = await prisma.alunos.update({
             where: { id: alunoId },
             data: {
                 alunosCursos: {
-                    create: {
+                    create: cursosIds.map((cursoId: number) => ({
                         cursos: {
                             connect: { id: cursoId }
                         }
-                    }
+                    }))
                 }
             },
             include: {
@@ -170,39 +161,36 @@ export default {
             }
         });
 
-
         return response.status(200).json(matricula);
     } catch (e) {
-        console.log(e);
-        return response.status(500).json("Erro ao matricular aluno");
+        return handleErrors(e, response);
     }
-},
-
-
+}
+,
 
 
 desmatricular: async (request: Request, response: Response) => {
     try {
-        const { alunoId, cursoId } = request.body;
+        const { alunoId, cursosIds } = request.body;
 
-
-        const matricula = await prisma.alunosCursos.deleteMany({
+        const resultado = await prisma.alunosCursos.deleteMany({
             where: {
                 alunosId: alunoId,
-                cursosId: cursoId
+                cursosId: {
+                    in: cursosIds
+                }
             }
         });
 
-
-        return response.status(200).json(matricula);
+        return response.status(200).json({
+            message: "Matrículas removidas com sucesso",
+            removidos: resultado.count
+        });
     } catch (e) {
-        return response.status(500).json("Erro ao remover matrícula");
+        console.log(e);
+        return response.status(500).json("Erro ao remover matrículas");
     }
 },
-
-
-
-
 
 
 };
